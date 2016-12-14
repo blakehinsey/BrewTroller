@@ -4,7 +4,7 @@
 #include <LiquidCrystal.h>
 
 // Input and output points
-  // pin_heaterRelay = digitalX?
+  const int pin_heaterRelay = 10;
   LiquidCrystal lcd(7,6,5,4,3,2); // !! need to lay out the pins
   const int pin_DispButton = 8;
   #define ONE_WIRE_BUS 9 // Data wire is plugged into digital pin 9 on the Arduino
@@ -22,8 +22,8 @@
   unsigned long tStateMin = 1; // minimum on/off time for the heater
   int hours;
   int minutes;
-  bool BHeater = 0;
-  bool BHeaterLast = 0;
+  bool BHeater = LOW;
+  bool BHeaterLast = LOW;
 
 // Display Setup
   int DispButtonState = 0;
@@ -31,6 +31,9 @@
   int tStateHours;
   int tStateMins;
 
+
+// Debug
+  int atest;
 
 // Sensors and related thresholds
   float TAmb = 0;
@@ -43,6 +46,7 @@ void setup(){
   sensors.begin(); // start sensors library for dallas temp
 
   pinMode(pin_DispButton, INPUT); // button to change display page
+  pinMode(pin_heaterRelay, OUTPUT); // signal to heater relay
 
   lcd.begin(16, 2);
   lcd.setCursor(0, 1);
@@ -56,8 +60,9 @@ tCurrent = millis()/1000; // time in seconds
   //sensTAmb = analogRead(A0);
   //TAmb = ((sensTAmb / 1024.0 * 5) - 0.5) * 100; // !! need to check this calibration - try the data logger at a few points
   sensors.requestTemperatures(); // get temperature from temp sensors
-  TBrew = sensors.getTempCByIndex(0); // this gets the first (0) sensor on the bus
-  TAmb = sensors.getTempCByIndex(1); // this gets the first (0) sensor on the bus
+  TBrew = sensors.getTempCByIndex(1); // this gets the first (0) sensor on the bus
+  TAmb = sensors.getTempCByIndex(0); // this gets the first (0) sensor on the bus
+  //index 0 and 1 swapped from prototype to actual build - make second build more consistent
 
 // Timers
 tState = tCurrent - tStateStart;
@@ -67,18 +72,18 @@ tState = tCurrent - tStateStart;
 
 
 // Heater logic
-BHeaterLast = BHeater;
+//BHeaterLast = BHeater;
 
 if (tState > tStateMin) { // only do anything with temperature data if time is greater than the state min
-  if (BHeater == 0) {
+  if (BHeater == LOW) {
     if (TBrew < (TTarget - Tdband)) {
-      BHeater = 1;
+      BHeater = HIGH;
       tStateStart = tCurrent;
     }
   }
   else {
     if (TBrew > (TTarget + Tdband)) {
-      BHeater = 0;
+      BHeater = LOW;
       tStateStart = tCurrent;
     }
   }
@@ -88,10 +93,15 @@ if (tState > tStateMin) { // only do anything with temperature data if time is g
 sens_TTarget = analogRead(pin_TTarget);
 TTarget = map(sens_TTarget,0,1023,10,30); // input, input from, input to, output from, output to
 
-// Heater control - what the f is going on here?
-if (BHeater != BHeaterLast) { //!! is this correct for does not equal?
-  //digitalWrite("""define the pin""", BHeater)
+// Not sure why the Low/High of the relay is working differently than expected??
+// if digitalWrite is set to low on the signal pin, the relay comes on??
+if (BHeater == LOW){
+  digitalWrite(pin_heaterRelay, HIGH);
 }
+else {
+  digitalWrite(pin_heaterRelay, LOW);
+}
+
 // Write to display
   DispButtonState = digitalRead(pin_DispButton); // check if the button is pressed
 
@@ -113,7 +123,7 @@ if (DispPage == 0) {
   lcd.print("Ta:");
   lcd.print(TAmb,1);
   // print heater state
-    if (BHeater == 1){
+    if (BHeater == HIGH){
       lcd.print("[ON]");
     }
     else {
@@ -160,8 +170,10 @@ then write the contents of the Page
 */
 
 // Serial output layout
-Serial.println(sens_TTarget);
-Serial.print("Heater?");
-Serial.print(BHeater);
+//Serial.println(sens_TTarget);
+//Serial.print("Heater?");
+//Serial.print(BHeater);
+atest = digitalRead(pin_heaterRelay);
+Serial.println(atest);
 delay(250); // only do something every x milliseconds
 }
